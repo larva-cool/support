@@ -28,7 +28,7 @@
     "ext-libxml": "*",
     "ext-fileinfo": "*",
     "nesbot/carbon": "^3.8",
-    "guzzlehttp/guzzle": "^6.5 || ^7.2",
+    "guzzlehttp/guzzle": "^8.0.1",
     "ezyang/htmlpurifier": "^4.14"
   },
   "require-dev": {
