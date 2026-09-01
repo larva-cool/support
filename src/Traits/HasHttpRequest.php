@@ -181,7 +181,7 @@ trait HasHttpRequest
      * @param array $headers
      * @return $this
      */
-    public function attach($name, $contents = '', string $filename = null, array $headers = [])
+    public function attach($name, $contents = '', ?string $filename = null, array $headers = [])
     {
         if (is_array($name)) {
             foreach ($name as $file) {
@@ -595,7 +595,7 @@ trait HasHttpRequest
                 'on_stats' => function ($transferStats) {
                     $this->transferStats = $transferStats;
                 },
-            ], $options, ['handler' => $this->getHandlerStack()])));
+            ], $options)));
             $response->cookies = $this->cookies;
             $response->transferStats = $this->transferStats;
             return $response;
@@ -651,7 +651,7 @@ trait HasHttpRequest
     {
         if (!($this->httpClient instanceof ClientInterface)) {
             $this->httpClient = new Client([
-                'handler' => HandlerStack::create($this->getGuzzleHandler()),
+                'handler' => $this->getHandlerStack(),
                 'cookies' => true,
             ]);
         }

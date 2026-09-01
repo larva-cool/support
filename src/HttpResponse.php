@@ -16,12 +16,24 @@ use Psr\Http\Message\UriInterface;
 
 /**
  * Class HTTPResponse
- * @property $transferStats
- * @property $cookies
  * @author Tongle Xu <xutongle@gmail.com>
  */
 class HttpResponse implements ArrayAccess
 {
+    /**
+     * The transfer stats.
+     *
+     * @var mixed
+     */
+    public $transferStats;
+
+    /**
+     * The cookies for the request.
+     *
+     * @var mixed
+     */
+    public $cookies;
+
     /**
      * The underlying PSR response.
      *
@@ -64,7 +76,7 @@ class HttpResponse implements ArrayAccess
      * @param mixed $default
      * @return mixed
      */
-    public function json(string $key = null, $default = null)
+    public function json(?string $key = null, $default = null)
     {
         if (!$this->decoded) {
             $this->decoded = Json::decode($this->body(), true);
@@ -82,7 +94,7 @@ class HttpResponse implements ArrayAccess
      * @param mixed $default
      * @return mixed
      */
-    public function xml(string $key = null, $default = null)
+    public function xml(?string $key = null, $default = null)
     {
         if (!$this->decoded) {
             $dom = new \DOMDocument('1.0', 'UTF-8');

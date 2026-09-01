@@ -29,7 +29,7 @@
 
 ## 环境需求
 
-- PHP `^8.1 || ^8.2 || ^8.3 || ^8.4`
+- PHP `^8.2`（支持 8.2 / 8.3 / 8.4+）
 - 扩展：`ext-curl`、`ext-dom`、`ext-json`、`ext-openssl`、`ext-mbstring`、`ext-simplexml`、`ext-libxml`、`ext-fileinfo`
 
 ## 安装

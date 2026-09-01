@@ -98,7 +98,13 @@ class HtmlHelper
     public static function getOutLink(string $url): array
     {
         $matches = parse_url($url);
+        if ($matches === false || !isset($matches['host'])) {
+            return [];
+        }
         $content = HttpClient::getRemoteContent($url);
+        if ($content === false || $content === '') {
+            return [];
+        }
         return self::getHtmlOutLink($content, $matches['host']);
     }
 

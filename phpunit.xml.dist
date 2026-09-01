@@ -9,9 +9,13 @@
             <directory>./tests/</directory>
         </testsuite>
     </testsuites>
-    <coverage processUncoveredFiles="true">
+    <source>
         <include>
             <directory suffix=".php">./src</directory>
         </include>
-    </coverage>
+    </source>
+    <coverage includeUncoveredFiles="true"/>
+    <php>
+        <ini name="date.timezone" value="Asia/Shanghai"/>
+    </php>
 </phpunit>
