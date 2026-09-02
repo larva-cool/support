@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag name
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # 提取当前版本段（从 X.Y.Z 标题到下一个版本标题之前）
+            NOTES=$(awk '/^## /{p=0} /^## '"${TAG}"'/{p=1; next} p' CHANGELOG.md | sed '/^## /,$d')
+            if [ -z "$NOTES" ]; then
+              NOTES="Release ${TAG}"
+            fi
+            echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "$NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "NOTES=Release ${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: ${{ steps.tag.outputs.TAG }}
+          body: ${{ steps.changelog.outputs.NOTES }}
+          generate_release_notes: false
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.TAG, '-') }}
