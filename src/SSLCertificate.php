@@ -295,7 +295,7 @@ class SSLCertificate
      * @param string|null $url
      * @return bool
      */
-    public function isValid(string $url = null): bool
+    public function isValid(?string $url = null): bool
     {
         if (!Carbon::now()->between($this->validFromDate(), $this->expirationDate())) {
             return false;

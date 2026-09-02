@@ -1064,7 +1064,7 @@ class ISO3166
      * @param string|null $country
      * @return string|null
      */
-    public static function countryCode(string $country = null): ?string
+    public static function countryCode(?string $country = null): ?string
     {
         if (empty($country)) {
             return null;

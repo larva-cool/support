@@ -253,7 +253,7 @@ class TimeHelper
      * @param  int|string|null  $new_datetime 要比较的时间(默认为当前时间)
      * @return int 相差天数
      */
-    public static function diffDays(int|string $datetime, int|string $new_datetime = null): int
+    public static function diffDays(int|string $datetime, int|string|null $new_datetime = null): int
     {
         $datetime = date('Y-m-d', self::toTimestamp($datetime));
         if ($new_datetime) {
@@ -289,7 +289,7 @@ class TimeHelper
      * @param  int|string|null  $new_datetime 要比较的时间(默认为当前时间)
      * @return int 相差月数
      */
-    public static function diffMonths(int|string $datetime, int|string $new_datetime = null): int
+    public static function diffMonths(int|string $datetime, int|string|null $new_datetime = null): int
     {
         $datetime = date('Y-m-d', self::toTimestamp($datetime));
         if ($new_datetime) {
@@ -378,7 +378,7 @@ class TimeHelper
      * @param bool       $round    是否取整(默认false),如果传入true,则返回当前小时0分钟的时间戳
      * @return int 时间戳
      */
-    public static function afterHour(int $hour = 1, int|string $datetime = null, bool $round = false): int
+    public static function afterHour(int $hour = 1, int|string|null $datetime = null, bool $round = false): int
     {
         $date = new DateTime();
         if ($datetime !== null) {
@@ -395,7 +395,7 @@ class TimeHelper
      * @param bool       $round    是否取整(默认false),如果传入true,则返回当前日期0点的时间戳
      * @return int 时间戳
      */
-    public static function beforeDay(int $day = 1, int|string $datetime = null, bool $round = false): int
+    public static function beforeDay(int $day = 1, int|string|null $datetime = null, bool $round = false): int
     {
         $date = new DateTime();
         if ($datetime !== null) {
@@ -444,7 +444,7 @@ class TimeHelper
      * @param  int|string|null  $datetime 任意格式时间字符串或时间戳(默认为当前时间)
      * @return int 时间戳
      */
-    public static function afterWeek(int $week = 1, int|string $datetime = null): int
+    public static function afterWeek(int $week = 1, int|string|null $datetime = null): int
     {
         $date = new DateTime();
         if ($datetime !== null) {
@@ -460,7 +460,7 @@ class TimeHelper
      * @param bool       $round    是否取整(默认false),如果传入true,则返回当前日期1号0点的时间戳
      * @return int 时间戳
      */
-    public static function beforeMonth(int $month = 1, int|string $datetime = null, bool $round = false): int
+    public static function beforeMonth(int $month = 1, int|string|null $datetime = null, bool $round = false): int
     {
         $date = new DateTime();
         if ($datetime !== null) {
@@ -477,7 +477,7 @@ class TimeHelper
      * @param bool       $round    是否取整(默认false),如果传入true,则返回当前日期1号0点的时间戳
      * @return int 时间戳
      */
-    public static function afterMonth(int $month = 1, int|string $datetime = null, bool $round = false): int
+    public static function afterMonth(int $month = 1, int|string|null $datetime = null, bool $round = false): int
     {
         $date = new DateTime();
         if ($datetime !== null) {
@@ -574,7 +574,7 @@ class TimeHelper
      * @param  int|string|null  $datetime  任意格式时间字符串或时间戳(默认为当前时间)
      * @return string 格式化后的时间字符串
      */
-    public static function format(string $format = 'Y-m-d H:i:s', int|string $datetime = null): string
+    public static function format(string $format = 'Y-m-d H:i:s', int|string|null $datetime = null): string
     {
         return date($format, self::toTimestamp($datetime));
     }
@@ -584,7 +584,7 @@ class TimeHelper
      * @param  int|string|null  $datetime 任意格式时间字符串或时间戳(默认为当前时间)
      * @return bool 闰年返回true,否则返回false
      */
-    public static function isLeapYear(int|string $datetime = null): bool
+    public static function isLeapYear(int|string|null $datetime = null): bool
     {
         return date('L', self::toTimestamp($datetime)) == 1;
     }
@@ -594,7 +594,7 @@ class TimeHelper
      * @param  int|string|null  $datetime 任意格式时间字符串或时间戳(默认为当前时间)
      * @return int 该年的天数
      */
-    public static function daysInYear(int|string $datetime = null): int
+    public static function daysInYear(int|string|null $datetime = null): int
     {
         return self::isLeapYear($datetime) ? 366 : 365;
     }
@@ -618,7 +618,7 @@ class TimeHelper
      * @return string
      * @throws Exception
      */
-    public static function timezoneFormat(string $toTimezone, string $fromTimezone = null, int|string $datetime = 'now', string $format = 'Y-m-d H:i:s'): string
+    public static function timezoneFormat(string $toTimezone, ?string $fromTimezone = null, int|string $datetime = 'now', string $format = 'Y-m-d H:i:s'): string
     {
         if (self::isTimestamp($datetime)) {
             $date = new DateTime();

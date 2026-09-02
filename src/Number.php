@@ -38,7 +38,7 @@ class Number
      * @param int|null $limit
      * @return float
      */
-    public static function price(float $price, int $limit = null): float
+    public static function price(float $price, ?int $limit = null): float
     {
         return static::float(max($price, 0), $limit ?? 2);
     }

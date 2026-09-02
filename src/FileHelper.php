@@ -206,7 +206,7 @@ class FileHelper
      * @param int|null $mode
      * @return bool|string
      */
-    public static function chmod(string $path, int $mode = null)
+    public static function chmod(string $path, ?int $mode = null)
     {
         if ($mode) {
             return chmod($path, $mode);

@@ -388,7 +388,7 @@ class ArrayHelper
      *
      * @throws \InvalidArgumentException
      */
-    public static function random(array $array, int $amount = null)
+    public static function random(array $array, ?int $amount = null)
     {
         if (is_null($amount)) {
             return $array[array_rand($array)];

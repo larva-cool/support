@@ -344,7 +344,7 @@ class StringHelper
      * @param null $encoding
      * @return int
      */
-    public static function length(string $value, $encoding = null): int
+    public static function length(string $value, ?string $encoding = null): int
     {
         if ($encoding !== null) {
             return mb_strlen($value, $encoding);
