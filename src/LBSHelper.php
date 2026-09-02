@@ -249,7 +249,9 @@ class LBSHelper
      */
     private static function isChina(float $longitude, float $latitude): bool
     {
-        return ($longitude < 72.004 || $longitude > 137.8347) || (($latitude < 0.8293 || $latitude > 55.8271) || false);
+        // 经度或纬度任一落在范围外即视为不在国内
+        return !($longitude < 72.004 || $longitude > 137.8347
+            || $latitude < 0.8293 || $latitude > 55.8271);
     }
 
     /**

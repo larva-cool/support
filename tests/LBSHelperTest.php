@@ -39,23 +39,28 @@ class LBSHelperTest extends TestCase
 
     public function testWGS84ToGCJ02()
     {
-        // isChina() 实现存在 buggy（|| 误用）：
-        // 只有经纬都在 72~138 / 0.8~55.8 内才被视为"境外"（走偏移分支）
-        // 其他全部视为"境内"（不偏移）
-        // 这里验证：境外坐标会被偏移
-        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(120.0, 30.0); // 太平洋海域
-        $this->assertNotSame(120.0, $lng);
-        $this->assertNotSame(30.0, $lat);
+        // 中国境内坐标不做偏移
+        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(116.397128, 39.916527); // 北京天安门
+        $this->assertSame(116.397128, $lng);
+        $this->assertSame(39.916527, $lat);
+    }
+
+    public function testWGS84ToGCJ02OutsideChina()
+    {
+        // 中国境外坐标会被偏移
+        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(-73.9857, 40.7484); // 纽约
+        $this->assertNotSame(-73.9857, $lng);
+        $this->assertNotSame(40.7484, $lat);
         $this->assertIsFloat($lng);
         $this->assertIsFloat($lat);
     }
 
-    public function testWGS84ToGCJ02InsideChinaNotShift()
+    public function testGCJ02ToWGS84()
     {
-        // 纬度越界（0.5 < 0.83）走"境内"分支
-        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(120.0, 0.5);
-        $this->assertSame(120.0, $lng);
-        $this->assertSame(0.5, $lat);
+        // 境内坐标 GCJ02 -> WGS84 不偏移
+        [$wgsLng, $wgsLat] = LBSHelper::GCJ02ToWGS84(116.397128, 39.916527);
+        $this->assertSame(116.397128, $wgsLng);
+        $this->assertSame(39.916527, $wgsLat);
     }
 
     public function testBD09ToGCJ02()

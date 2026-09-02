@@ -15,15 +15,16 @@ class IPHelperTest extends TestCase
 {
     public function testIsPrivateForIpV4()
     {
-        // 注意：IPHelper::$privateIps 是 ['cidr' => 'description']，foreach 拿到 value
-        // 实际行为依赖源代码循环取 value 的逻辑，这里我们直接验证 CIDR 匹配
-        $this->assertTrue(IPHelper::inRange('127.0.0.1', '127.0.0.0/8'));
-        $this->assertTrue(IPHelper::inRange('10.1.2.3', '10.0.0.0/8'));
-        $this->assertTrue(IPHelper::inRange('192.168.0.10', '192.168.0.0/16'));
-        $this->assertTrue(IPHelper::inRange('172.16.0.1', '172.16.0.0/12'));
-        $this->assertTrue(IPHelper::inRange('169.254.0.1', '169.254.0.0/16'));
-        $this->assertFalse(IPHelper::inRange('8.8.8.8', '127.0.0.0/8'));
-        $this->assertFalse(IPHelper::inRange('8.8.8.8', '10.0.0.0/8'));
+        // 私有网段
+        $this->assertTrue(IPHelper::isPrivateForIpV4('127.0.0.1'));
+        $this->assertTrue(IPHelper::isPrivateForIpV4('10.1.2.3'));
+        $this->assertTrue(IPHelper::isPrivateForIpV4('192.168.0.10'));
+        $this->assertTrue(IPHelper::isPrivateForIpV4('172.16.0.1'));
+        $this->assertTrue(IPHelper::isPrivateForIpV4('169.254.0.1'));
+
+        // 公网地址
+        $this->assertFalse(IPHelper::isPrivateForIpV4('8.8.8.8'));
+        $this->assertFalse(IPHelper::isPrivateForIpV4('1.1.1.1'));
     }
 
     public function testFuzzyIpV4()

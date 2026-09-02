@@ -60,8 +60,8 @@ class IPHelper
      */
     public static function isPrivateForIpV4(string $ip): bool
     {
-        foreach (self::$privateIps as $privateIp) {
-            if (self::inRange($ip, $privateIp)) {
+        foreach (self::$privateIps as $cidr => $description) {
+            if (self::inRange($ip, $cidr)) {
                 return true;
             }
         }
