@@ -312,7 +312,7 @@ class SSLCertificate
      * @param string|null $url
      * @return bool
      */
-    public function isValidUntil(Carbon $carbon, string $url = null): bool
+    public function isValidUntil(Carbon $carbon, ?string $url = null): bool
     {
         if ($this->expirationDate()->lte($carbon)) {
             return false;

@@ -25,7 +25,7 @@ class Number
      * @param int|null $limit 保留位数
      * @return float
      */
-    public static function float(float $number, int $limit = null): float
+    public static function float(float $number, ?int $limit = null): float
     {
         $limit = $limit ?? 2;
         return (float) sprintf("%.{$limit}f", $number);

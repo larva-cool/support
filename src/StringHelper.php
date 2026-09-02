@@ -404,7 +404,7 @@ class StringHelper
      * @param string|null $default
      * @return array
      */
-    public static function parseCallback(string $callback, string $default = null): array
+    public static function parseCallback(string $callback, ?string $default = null): array
     {
         return static::contains($callback, '@') ? explode('@', $callback, 2) : [$callback, $default];
     }
@@ -417,7 +417,7 @@ class StringHelper
      * @param int|null $length
      * @return string
      */
-    public static function substr(string $string, int $start, int $length = null): string
+    public static function substr(string $string, int $start, ?int $length = null): string
     {
         return mb_substr($string, $start, $length, 'UTF-8');
     }

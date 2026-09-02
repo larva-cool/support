@@ -133,7 +133,7 @@ class ArrayHelper
      *
      * @return mixed
      */
-    public static function first(array $array, callable $callback = null, $default = null)
+    public static function first(array $array, ?callable $callback = null, $default = null)
     {
         if (is_null($callback)) {
             if (empty($array)) {
@@ -163,7 +163,7 @@ class ArrayHelper
      *
      * @return mixed
      */
-    public static function last(array $array, callable $callback = null, $default = null)
+    public static function last(array $array, ?callable $callback = null, $default = null)
     {
         if (is_null($callback)) {
             return empty($array) ? $default : end($array);
