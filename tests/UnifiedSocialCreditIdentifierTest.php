@@ -50,4 +50,35 @@ class UnifiedSocialCreditIdentifierTest extends TestCase
         $this->assertSame('410105', UnifiedSocialCreditIdentifier::getDistrictCodeByCreditIdentifier('91410105MA9G98K57A'));
         $this->assertSame('金水区', UnifiedSocialCreditIdentifier::getDistrictByCreditIdentifier('91410105MA9G98K57A'));
     }
+
+    public function testInvalidCharset()
+    {
+        // I / O / Z / S / V 等被 GB 32100 排除
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000I02100433I'));
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000O02100433O'));
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000S02100433S'));
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000V02100433V'));
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000Z02100433Z'));
+    }
+
+    public function testWrongChecksum()
+    {
+        // 长度合法、字符合法，但校验位被改错
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('91110000802100433X'));
+        $this->assertFalse(UnifiedSocialCreditIdentifier::validate('9141010056103928XX'));
+    }
+
+    public function testGenerate()
+    {
+        $code = UnifiedSocialCreditIdentifier::generate('110000');
+        $this->assertSame(18, strlen($code));
+        $this->assertTrue(UnifiedSocialCreditIdentifier::validate($code));
+        $this->assertSame('北京市', UnifiedSocialCreditIdentifier::getProvinceByCreditIdentifier($code));
+    }
+
+    public function testGenerateInvalidArea()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        UnifiedSocialCreditIdentifier::generate('12345');
+    }
 }

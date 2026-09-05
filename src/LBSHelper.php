@@ -50,22 +50,25 @@ class LBSHelper
     /**
      * 获取多个经纬度的中心点
      * @param array $points [[lon,lat],[lon,lat]]
-     * @return array|bool [lon,lat]
+     * @return array|false [lon,lat]，点位为空时返回 false
      *
-     * // 测试数据
+     * // 测试数据 (lng, lat)
      * $data = array(
-     * array(76.322333,45.849382),
-     * array(45.843543, 75.324143),
-     * array(45.765744, 76.543223),
-     * array(45.784234, 74.542335)
+     * array(76.322333, 45.849382),
+     * array(75.324143, 45.843543),
+     * array(76.543223, 45.765744),
+     * array(74.542335, 45.784234)
      * );
      *
-     * print_r(GetCenterFromDegrees($data));
-     * // Array ( [0] => 45.813538469271 [1] => 75.682996448603 )
+     * print_r(LBSHelper::getCenterFromDegrees($data));
+     * // Array ( [0] => 75.682996 [1] => 45.813538 )
      */
     public static function getCenterFromDegrees(array $points)
     {
         $numCoords = count($points);
+        if ($numCoords === 0) {
+            return false;
+        }
         $X = 0.0;
         $Y = 0.0;
         $Z = 0.0;
@@ -103,12 +106,13 @@ class LBSHelper
         $latitude1 = floatval($latitude1) * $rad;
         $longitude2 = floatval($longitude2) * $rad;
         $latitude2 = floatval($latitude2) * $rad;
-        $theta = $longitude2 - $longitude1;
-        $dist = acos(sin($latitude1) * sin($latitude2) + cos($latitude1) * cos($latitude2) * cos($theta));
-        if ($dist < 0) {
-            $dist += M_PI;
-        }
-        return $dist * $radius;
+        // Haversine 公式，数值稳定性更好（尤其适合小距离），且不会出现 acos 入参越界导致的 NAN
+        $dLat = $latitude2 - $latitude1;
+        $dLon = $longitude2 - $longitude1;
+        $a = sin($dLat / 2) * sin($dLat / 2)
+            + cos($latitude1) * cos($latitude2) * sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return $c * $radius;
     }
 
     /**
@@ -142,46 +146,46 @@ class LBSHelper
      */
     public static function WGS84ToGCJ02(float $longitude, float $latitude): array
     {
-        if (self::isChina($longitude, $latitude)) {
+        // 仅国内坐标需要做火星偏移，境外坐标不做偏移
+        if (!static::isChina($longitude, $latitude)) {
             return [$longitude, $latitude];
-        } else {
-            $dlat = static::transFormLatitude($longitude - 105.0, $latitude - 35.0);
-            $dlng = static::transFormLongitude($longitude - 105.0, $latitude - 35.0);
-            $radLat = $latitude / 180.0 * M_PI;
-            $magic = sin($radLat);
-            $magic = 1 - static::$EE * $magic * $magic;
-            $sqrtMagic = sqrt($magic);
-            $dlat = ($dlat * 180.0) / ((static::$radius * (1 - static::$EE)) / ($magic * $sqrtMagic) * M_PI);
-            $dlng = ($dlng * 180.0) / (static::$radius / $sqrtMagic * cos($radLat) * M_PI);
-            $magicLat = $latitude + $dlat;
-            $magicLon = $longitude + $dlng;
-            return [$magicLon, $magicLat];
         }
+        $dlat = static::transFormLatitude($longitude - 105.0, $latitude - 35.0);
+        $dlng = static::transFormLongitude($longitude - 105.0, $latitude - 35.0);
+        $radLat = $latitude / 180.0 * M_PI;
+        $magic = sin($radLat);
+        $magic = 1 - static::$EE * $magic * $magic;
+        $sqrtMagic = sqrt($magic);
+        $dlat = ($dlat * 180.0) / ((static::$radius * (1 - static::$EE)) / ($magic * $sqrtMagic) * M_PI);
+        $dlng = ($dlng * 180.0) / (static::$radius / $sqrtMagic * cos($radLat) * M_PI);
+        $magicLat = $latitude + $dlat;
+        $magicLon = $longitude + $dlng;
+        return [$magicLon, $magicLat];
     }
 
     /**
-     * GCJ02 转换为 WGS84 (GPS转火星)
+     * GCJ02 转换为 WGS84 (火星转GPS)
      * @param float $longitude
      * @param float $latitude
      * @return array(lng, lat);
      */
     public static function GCJ02ToWGS84(float $longitude, float $latitude): array
     {
-        if (static::isChina($longitude, $latitude)) {
+        // 仅国内坐标需要做逆向偏移，境外坐标不做偏移
+        if (!static::isChina($longitude, $latitude)) {
             return [$longitude, $latitude];
-        } else {
-            $dlat = static::transFormLatitude($longitude - 105.0, $latitude - 35.0);
-            $dlng = static::transFormLongitude($longitude - 105.0, $latitude - 35.0);
-            $radLat = $latitude / 180.0 * M_PI;
-            $magic = sin($radLat);
-            $magic = 1 - static::$EE * $magic * $magic;
-            $sqrtMagic = sqrt($magic);
-            $dlat = ($dlat * 180.0) / ((static::$radius * (1 - static::$EE)) / ($magic * $sqrtMagic) * M_PI);
-            $dlng = ($dlng * 180.0) / (static::$radius / $sqrtMagic * cos($radLat) * M_PI);
-            $magicLat = $latitude + $dlat;
-            $magicLng = $longitude + $dlng;
-            return [$longitude * 2 - $magicLng, $latitude * 2 - $magicLat];
         }
+        $dlat = static::transFormLatitude($longitude - 105.0, $latitude - 35.0);
+        $dlng = static::transFormLongitude($longitude - 105.0, $latitude - 35.0);
+        $radLat = $latitude / 180.0 * M_PI;
+        $magic = sin($radLat);
+        $magic = 1 - static::$EE * $magic * $magic;
+        $sqrtMagic = sqrt($magic);
+        $dlat = ($dlat * 180.0) / ((static::$radius * (1 - static::$EE)) / ($magic * $sqrtMagic) * M_PI);
+        $dlng = ($dlng * 180.0) / (static::$radius / $sqrtMagic * cos($radLat) * M_PI);
+        $magicLat = $latitude + $dlat;
+        $magicLng = $longitude + $dlng;
+        return [$longitude * 2 - $magicLng, $latitude * 2 - $magicLat];
     }
 
     /**

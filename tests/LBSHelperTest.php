@@ -40,28 +40,39 @@ class LBSHelperTest extends TestCase
 
     public function testWGS84ToGCJ02()
     {
-        // 中国境内坐标不做偏移
-        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(116.397128, 39.916527); // 北京天安门
-        $this->assertSame(116.397128, $lng);
-        $this->assertSame(39.916527, $lat);
-    }
-
-    public function testWGS84ToGCJ02OutsideChina()
-    {
-        // 中国境外坐标会被偏移
-        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(-73.9857, 40.7484); // 纽约
-        $this->assertNotSame(-73.9857, $lng);
-        $this->assertNotSame(40.7484, $lat);
+        // 中国境内坐标需做火星偏移 (WGS84 -> GCJ02)
+        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(116.391275, 39.906217); // 北京天安门 WGS84
+        $this->assertNotSame(116.391275, $lng);
+        $this->assertNotSame(39.906217, $lat);
         $this->assertIsFloat($lng);
         $this->assertIsFloat($lat);
     }
 
+    public function testWGS84ToGCJ02OutsideChina()
+    {
+        // 中国境外坐标不做偏移
+        [$lng, $lat] = LBSHelper::WGS84ToGCJ02(-73.9857, 40.7484); // 纽约
+        $this->assertSame(-73.9857, $lng);
+        $this->assertSame(40.7484, $lat);
+    }
+
     public function testGCJ02ToWGS84()
     {
-        // 境内坐标 GCJ02 -> WGS84 不偏移
-        [$wgsLng, $wgsLat] = LBSHelper::GCJ02ToWGS84(116.397128, 39.916527);
-        $this->assertSame(116.397128, $wgsLng);
-        $this->assertSame(39.916527, $wgsLat);
+        // 境内坐标 GCJ02 -> WGS84 做逆向偏移
+        [$wgsLng, $wgsLat] = LBSHelper::GCJ02ToWGS84(116.397428, 39.90923);
+        $this->assertNotSame(116.397428, $wgsLng);
+        $this->assertNotSame(39.90923, $wgsLat);
+        $this->assertIsFloat($wgsLng);
+        $this->assertIsFloat($wgsLat);
+    }
+
+    public function testCoordinateRoundTrip()
+    {
+        // WGS84 -> GCJ02 -> WGS84 往返误差应小于 0.001
+        [$gcjLng, $gcjLat] = LBSHelper::WGS84ToGCJ02(116.391275, 39.906217);
+        [$wgsLng, $wgsLat] = LBSHelper::GCJ02ToWGS84($gcjLng, $gcjLat);
+        $this->assertEqualsWithDelta(116.391275, $wgsLng, 0.001);
+        $this->assertEqualsWithDelta(39.906217, $wgsLat, 0.001);
     }
 
     public function testBD09ToGCJ02()
