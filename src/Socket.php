@@ -55,13 +55,15 @@ class Socket extends BaseObject
             $this->disconnect();
         }
 
+        $errNum = 0;
+        $errStr = '';
         if ($this->persistent) {
             $this->connection = @pfsockopen($this->host, $this->port, $errNum, $errStr, $this->timeout);
         } else {
-            $this->connection = fsockopen($this->host, $this->port, $errNum, $errStr, $this->timeout);
+            $this->connection = @fsockopen($this->host, $this->port, $errNum, $errStr, $this->timeout);
         }
 
-        if (!empty($errNum) || !empty($errStr)) {
+        if ($errNum !== 0 || $errStr !== '') {
             $this->error($errStr, $errNum);
         }
         $this->connected = is_resource($this->connection);
@@ -73,7 +75,7 @@ class Socket extends BaseObject
      * @param string $errStr
      * @param int $errNum
      */
-    public function error(string $errStr, int $errNum)
+    public function error(string $errStr, int $errNum): void
     {
     }
 
@@ -121,15 +123,19 @@ class Socket extends BaseObject
             $this->connected = false;
             return true;
         }
-        $this->connected = !fclose($this->connection);
-        if (!$this->connected) {
+        $closed = fclose($this->connection);
+        $this->connected = !$closed;
+        if ($closed) {
             $this->connection = null;
+            return true;
         }
-        return !$this->connected;
+        return false;
     }
 
     public function __destruct()
     {
-        $this->disconnect();
+        if (is_resource($this->connection)) {
+            $this->disconnect();
+        }
     }
 }
