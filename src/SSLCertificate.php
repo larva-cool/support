@@ -452,11 +452,15 @@ class SSLCertificate
         // RFC 6125: 通配符 "*" 只能匹配单个最左侧标签
         // 因此 $wildcardHost 的最左标签必须是单独的 "*"，且 $host 的最左标签必须存在且非空
         $suffix = substr($wildcardHost, 2); // "example.com"
-        $hostSuffix = substr($host, -strlen($suffix));
+        $suffixLength = strlen($suffix);
+        if ($suffixLength >= strlen($host)) {
+            return false;
+        }
+        $hostSuffix = substr($host, -$suffixLength);
         if ($hostSuffix !== $suffix) {
             return false;
         }
-        $leftLabel = substr($host, 0, -strlen($suffix) - 1); // 去掉 ".suffix" 后的左侧
+        $leftLabel = substr($host, 0, -$suffixLength - 1); // 去掉 ".suffix" 后的左侧
         return $leftLabel !== '' && strpos($leftLabel, '.') === false;
     }
 }
