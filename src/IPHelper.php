@@ -6,6 +6,8 @@
  * @link http://www.larva.com.cn/
  */
 
+declare(strict_types=1);
+
 namespace Larva\Support;
 
 /**
@@ -77,6 +79,9 @@ class IPHelper
     public static function fuzzyIpV4(string $ip): string
     {
         $ipArray = explode('.', $ip);
+        if (count($ipArray) !== 4) {
+            return $ip;
+        }
         return $ipArray[0] . '.' . $ipArray[1] . '.*.*';
     }
 
@@ -88,6 +93,9 @@ class IPHelper
     public static function fuzzyIpv4End(string $ip): string
     {
         $ipArray = explode('.', $ip);
+        if (count($ipArray) !== 4) {
+            return $ip;
+        }
         return $ipArray[0] . '.' . $ipArray[1] . '.' . $ipArray[2] . '.*';
     }
 
@@ -99,6 +107,9 @@ class IPHelper
     public static function startIpv4(string $ip): string
     {
         $ipArray = explode('.', $ip);
+        if (count($ipArray) !== 4) {
+            return $ip;
+        }
         return $ipArray[0] . '.' . $ipArray[1] . '.' . $ipArray[2] . '.0';
     }
 
@@ -110,6 +121,9 @@ class IPHelper
     public static function endIpv4(string $ip): string
     {
         $ipArray = explode('.', $ip);
+        if (count($ipArray) !== 4) {
+            return $ip;
+        }
         return $ipArray[0] . '.' . $ipArray[1] . '.' . $ipArray[2] . '.255';
     }
 
@@ -166,8 +180,10 @@ class IPHelper
 
     /**
      * 通过 CIDR 获取IP开始和结束
+     * @param string $cidr
+     * @return array
      */
-    public static function getIPv4Range($cidr): array
+    public static function getIPv4Range(string $cidr): array
     {
         [$ip, $mask] = explode('/', $cidr);
         $range = ip2long($ip) & ((-1 << (32 - $mask)));
@@ -210,8 +226,8 @@ class IPHelper
             return false;
         }
         $maxMask = $ipVersion === self::IPV4 ? self::IPV4_ADDRESS_LENGTH : self::IPV6_ADDRESS_LENGTH;
-        $mask = $mask ?? $maxMask;
-        $netMask = $netMask ?? $maxMask;
+        $mask = $mask !== null ? (int)$mask : $maxMask;
+        $netMask = $netMask !== null ? (int)$netMask : $maxMask;
         $binIp = static::ip2bin($ip);
         $binNet = static::ip2bin($net);
         return substr($binIp, 0, $netMask) === substr($binNet, 0, $netMask) && $mask >= $netMask;
@@ -246,12 +262,12 @@ class IPHelper
         if (static::getIpVersion($ip) === self::IPV4) {
             return str_pad(base_convert(sprintf('%u', ip2long($ip)), 10, 2), self::IPV4_ADDRESS_LENGTH, '0', STR_PAD_LEFT);
         }
-        $unpack = unpack('A16', inet_pton($ip));
+        $unpack = unpack('a16', inet_pton($ip));
         $binStr = array_shift($unpack);
         $bytes = self::IPV6_ADDRESS_LENGTH / 8; // 128 bit / 8 = 16 bytes
         $result = '';
         while ($bytes-- > 0) {
-            $result = sprintf('%08b', isset($binStr[$bytes]) ? ord($binStr[$bytes]) : '0') . $result;
+            $result = sprintf('%08b', isset($binStr[$bytes]) ? ord($binStr[$bytes]) : 0) . $result;
         }
         return $result;
     }
@@ -271,7 +287,9 @@ class IPHelper
         $dnsRecord = @dns_get_record($host, $type);
         if ($dnsRecord) {
             if ($onlyIp) {
-                return array_column($dnsRecord, 'ip');
+                // DNS_A 记录的 IP 在 'ip' 键，DNS_AAAA 记录在 'ipv6' 键
+                $column = $type === DNS_AAAA ? 'ipv6' : 'ip';
+                return array_column($dnsRecord, $column);
             }
             return $dnsRecord;
         }

@@ -107,4 +107,80 @@ class IPHelperTest extends TestCase
         $v6 = IPHelper::ip2bin('2001:db8::1');
         $this->assertSame(128, strlen($v6));
     }
+
+    public function testIp2binIPv4Value()
+    {
+        // 192.168.1.1 = 11000000 10101000 00000001 00000001
+        $this->assertSame('11000000101010000000000100000001', IPHelper::ip2bin('192.168.1.1'));
+    }
+
+    public function testIp2binIPv6Value()
+    {
+        // 全零 IPv6
+        $this->assertSame(str_repeat('0', 128), IPHelper::ip2bin('::'));
+    }
+
+    public function testInRangeIPv6()
+    {
+        $this->assertTrue(IPHelper::inRange('2001:db8::1', '2001:db8::/32'));
+        $this->assertFalse(IPHelper::inRange('2001:db9::1', '2001:db8::/32'));
+    }
+
+    public function testInRangeWithoutMask()
+    {
+        // 不带掩码的 IP 等同于 /32（IPv4）或 /128（IPv6）
+        $this->assertTrue(IPHelper::inRange('192.168.1.1', '192.168.1.1'));
+        $this->assertFalse(IPHelper::inRange('192.168.1.2', '192.168.1.1'));
+    }
+
+    public function testFuzzyIpV4InvalidInput()
+    {
+        $this->assertSame('not-an-ip', IPHelper::fuzzyIpV4('not-an-ip'));
+        $this->assertSame('1.2', IPHelper::fuzzyIpV4('1.2'));
+    }
+
+    public function testFuzzyIpv4EndInvalidInput()
+    {
+        $this->assertSame('bad', IPHelper::fuzzyIpv4End('bad'));
+    }
+
+    public function testStartIpv4InvalidInput()
+    {
+        $this->assertSame('bad', IPHelper::startIpv4('bad'));
+    }
+
+    public function testEndIpv4InvalidInput()
+    {
+        $this->assertSame('bad', IPHelper::endIpv4('bad'));
+    }
+
+    public function testGetIPv4RangeBoundary()
+    {
+        // /32 单 IP
+        [$start, $end] = IPHelper::getIPv4Range('10.0.0.5/32');
+        $this->assertSame('10.0.0.5', $start);
+        $this->assertSame('10.0.0.5', $end);
+
+        // /24
+        [$s, $e] = IPHelper::getIPv4Range('192.168.1.0/24');
+        $this->assertSame('192.168.1.0', $s);
+        $this->assertSame('192.168.1.255', $e);
+    }
+
+    public function testDnsRecordWithIp()
+    {
+        // 直接传 IP 应返回该 IP
+        $result = IPHelper::dnsRecord('8.8.8.8');
+        $this->assertSame(['8.8.8.8'], $result);
+    }
+
+    public function testGetHostIpV4ReturnsFalseForInvalidHost()
+    {
+        $this->assertFalse(IPHelper::getHostIpV4('this-host-does-not-exist.invalid'));
+    }
+
+    public function testGetHostIpV6ReturnsFalseForInvalidHost()
+    {
+        $this->assertFalse(IPHelper::getHostIpV6('this-host-does-not-exist.invalid'));
+    }
 }

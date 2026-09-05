@@ -177,7 +177,6 @@ class ISO3166
         'NR' => 'Nauru',
         'NP' => 'Nepal',
         'NL' => 'Netherlands',
-        'AN' => 'Netherlands Antilles',
         'NC' => 'New Caledonia',
         'NZ' => 'New Zealand',
         'NI' => 'Nicaragua',
@@ -273,8 +272,6 @@ class ISO3166
         'YE' => 'Yemen',
         'ZM' => 'Zambia',
         'ZW' => 'Zimbabwe',
-        'YU' => 'Socialist Federal Republic of Yugoslavia',
-        'KT' => 'Ivory Coast',
     ];
 
     /**
@@ -282,7 +279,7 @@ class ISO3166
      * @var array
      */
     public static array $positions = [
-        // lat / lon
+        // lon / lat
         'AF' => [69.11, 34.28],
         'AX' => [60.17, 19.91],
         'AL' => [19.49, 41.18],
@@ -329,7 +326,7 @@ class ISO3166
         'CF' => [18.35, 4.23],
         'TD' => [14.59, 12.10],
         'CL' => [-70.40, -33.24],
-        'CN' => [39.904, 116.408],
+        'CN' => [116.408, 39.904],
         'CX' => [-10.44, 105.69],
         'CC' => [-12.16, 96.87],
         'CO' => [-74.00, 4.34],
@@ -438,7 +435,6 @@ class ISO3166
         'NR' => [-0.52, 166.92],
         'NP' => [85.20, 27.45],
         'NL' => [04.54, 52.23],
-        'AN' => [-69.00, 12.05],
         'NC' => [166.30, -22.17],
         'NZ' => [174.46, -41.19],
         'NI' => [-86.20, 12.06],
@@ -534,8 +530,6 @@ class ISO3166
         'YE' => [15.79, 47.85],
         'ZM' => [28.16, -15.28],
         'ZW' => [31.02, -17.43],
-        'YU' => [20.37, 44.50],
-        'KT' => [-5.17, 6.49],
     ];
 
     /**
@@ -695,7 +689,6 @@ class ISO3166
         "NR" => "674",
         "NP" => "977",
         "NL" => "31",
-        "AN" => "599",
         "NC" => "687",
         "NZ" => "64",
         "NI" => "505",
@@ -787,8 +780,6 @@ class ISO3166
         "YE" => "967",
         "ZM" => "260",
         "ZW" => "263",
-        "YU" => "338",
-        "KT" => "225",
     ];
 
     /**
@@ -1050,13 +1041,15 @@ class ISO3166
 
     /**
      * 获取国家名称
-     * @param string $code
+     * @param string $code 国家代码（不区分大小写）
      * @param string $locale
-     * @return string
+     * @return string 无法识别时返回空字符串
      */
     public static function country(string $code, string $locale = 'en'): string
     {
-        return Locale::getDisplayRegion("_$code", $locale);
+        $name = Locale::getDisplayRegion('_' . strtoupper($code), $locale);
+
+        return $name === false ? '' : $name;
     }
 
     /**
@@ -1075,21 +1068,21 @@ class ISO3166
     /**
      * 获取国家首都经纬度
      * @param string $code
-     * @return array
+     * @return array [lon, lat]，未找到时返回空数组
      */
     public static function position(string $code): array
     {
-        return static::$positions[strtoupper($code)] ?? [39.904, 116.408];
+        return static::$positions[strtoupper($code)] ?? [];
     }
 
     /**
      * 获取国际区号
      * @param string $code
-     * @return string
+     * @return string|null 未找到时返回 null
      */
-    public static function phoneCode(string $code): string
+    public static function phoneCode(string $code): ?string
     {
-        return static::$phoneCodes[strtoupper($code)] ?? 'N/A';
+        return static::$phoneCodes[strtoupper($code)] ?? null;
     }
 
     /**
