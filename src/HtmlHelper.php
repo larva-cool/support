@@ -26,8 +26,11 @@ class HtmlHelper
      */
     public static function purify(string $html): string
     {
-        $config = HTMLPurifier_Config::createDefault();
-        $purifier = new \HTMLPurifier($config);
+        static $purifier = null;
+        if ($purifier === null) {
+            $config = HTMLPurifier_Config::createDefault();
+            $purifier = new \HTMLPurifier($config);
+        }
         return $purifier->purify($html);
     }
 
@@ -132,8 +135,8 @@ class HtmlHelper
     {
         $result = ['title' => '', 'keywords' => '', 'description' => '', 'metaTags' => []];
         if (!empty($content)) {
-            if (($chatSet = static::getCharSet($content)) != 'UTF-8') { // 转码
-                $content = mb_convert_encoding($content, 'UTF-8', $chatSet);
+            if (($charSet = static::getCharSet($content)) != 'UTF-8') { // 转码
+                $content = mb_convert_encoding($content, 'UTF-8', $charSet);
             }
             // 解析title
             if (preg_match('#<title[^>]*>(.*?)</title>#si', $content, $match)) {
@@ -183,7 +186,12 @@ class HtmlHelper
                 }
                 if (!in_array($matches ['host'], $outLinks) && (stripos($link, 'http:') !== false || stripos($link, 'https:') !== false)) {
                     $outLinks [] = $matches ['host'];
-                    $links [] = ['title' => $document [4] [$key], 'nofollow' => !strpos($document [1] [$key], 'nofollow') ? 0 : 1, 'url' => $link, 'host' => $matches ['host']];
+                    $links [] = [
+                        'title' => $document [4] [$key],
+                        'nofollow' => strpos($document [1] [$key] . $document [3] [$key], 'nofollow') === false ? 0 : 1,
+                        'url' => $link,
+                        'host' => $matches ['host'],
+                    ];
                 } else {
                     continue;
                 }
@@ -261,16 +269,16 @@ class HtmlHelper
      * @param string|array $tags
      * @return string
      */
-    public static function stripHtmlTags(string $content, $tags): string
+    public static function stripHtmlTags(string $content, string|array $tags): string
     {
-        $patterns = [];
         if (!is_array($tags)) {
             $tags = [$tags];
         }
+        $patterns = [];
         foreach ($tags as $tag) {
-            $patterns[] = "/(<(?:\/" . $tag . "|" . $tag . ")[^>]*>)/i";
+            $patterns[] = '/(<\/?' . preg_quote((string)$tag, '/') . '[^>]*>)/i';
         }
-        return preg_replace($patterns, '', $content);
+        return (string)preg_replace($patterns, '', $content);
     }
 
     /**
