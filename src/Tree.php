@@ -158,7 +158,7 @@ class Tree
                 if (isset($this->icon[1])) {
                     $j .= $this->icon[1];
                 }
-                $k = $itemPrefix !== '' ? ($this->icon[0] ?? '') . $this->blankSpace : $this->blankSpace;
+                $k = $itemPrefix !== '' ? ($this->icon[0] ?? '') . $this->blankSpace : '';
             }
             $spacer = $itemPrefix !== '' ? $itemPrefix . $j : $j;
             $childInfo[$this->spacerKey] = $spacer;
