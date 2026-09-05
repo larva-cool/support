@@ -9,6 +9,8 @@
 namespace Larva\Support;
 
 use Carbon\Carbon;
+use Larva\Support\Exception\InvalidUrlException;
+use Larva\Support\Exception\RuntimeException;
 
 /**
  * SSL 证书助手
@@ -29,7 +31,7 @@ class SSLCertificate
     /**
      * @var string SHA256指纹
      */
-    private string $fingerprintSha256;
+    protected string $fingerprintSha256;
 
     /**
      * SSLCertificate constructor.
@@ -46,25 +48,40 @@ class SSLCertificate
 
     /**
      * 创建证书实例
-     * @param mixed $certificatePem
+     * @param string $certificatePem PEM 编码的证书内容
      * @return SSLCertificate
+     * @throws RuntimeException 当证书解析失败时
      */
-    public static function make($certificatePem): self
+    public static function make(string $certificatePem): self
     {
         $certificateFields = openssl_x509_parse($certificatePem);
+        if ($certificateFields === false) {
+            throw new RuntimeException('Could not parse the given SSL certificate.');
+        }
         $fingerprint = openssl_x509_fingerprint($certificatePem);
         $fingerprintSha256 = openssl_x509_fingerprint($certificatePem, 'sha256');
+        if ($fingerprint === false || $fingerprintSha256 === false) {
+            throw new RuntimeException('Could not compute certificate fingerprint.');
+        }
         return new self($certificateFields, $fingerprint, $fingerprintSha256);
     }
 
     /**
      * 从文件创建证书实例
-     * @param string $pathToCertificate
+     * @param string $pathToCertificate 证书文件路径
      * @return SSLCertificate
+     * @throws RuntimeException 当文件不存在或解析失败时
      */
     public static function makeFromFile(string $pathToCertificate): self
     {
-        return self::make(file_get_contents($pathToCertificate));
+        if (!is_file($pathToCertificate) || !is_readable($pathToCertificate)) {
+            throw new RuntimeException("Certificate file `{$pathToCertificate}` does not exist or is not readable.");
+        }
+        $contents = file_get_contents($pathToCertificate);
+        if ($contents === false) {
+            throw new RuntimeException("Could not read certificate file `{$pathToCertificate}`.");
+        }
+        return self::make($contents);
     }
 
     /**
@@ -95,6 +112,15 @@ class SSLCertificate
     }
 
     /**
+     * 获取签名算法长名
+     * @return string
+     */
+    public function getSignatureAlgorithmLongName(): string
+    {
+        return $this->rawCertificateFields['signatureTypeLN'] ?? '';
+    }
+
+    /**
      * 获取发行人组织
      * @return string
      */
@@ -104,12 +130,31 @@ class SSLCertificate
     }
 
     /**
+     * 获取证书版本
+     * @return int
+     */
+    public function getVersion(): int
+    {
+        return (int)($this->rawCertificateFields['version'] ?? 0);
+    }
+
+    /**
+     * 获取序列号
+     * @return string
+     */
+    public function getSerialNumber(): string
+    {
+        $serial = $this->rawCertificateFields['serialNumber'] ?? '';
+        return is_string($serial) ? $serial : (string)$serial;
+    }
+
+    /**
      * 获取证书指纹
      * @return string
      */
     public function getFingerprint(): string
     {
-        return $this->fingerprint ?? '';
+        return $this->fingerprint;
     }
 
     /**
@@ -118,7 +163,7 @@ class SSLCertificate
      */
     public function getFingerprintSha256(): string
     {
-        return $this->fingerprintSha256 ?? '';
+        return $this->fingerprintSha256;
     }
 
     /**
@@ -127,43 +172,56 @@ class SSLCertificate
      */
     public function getDomain(): string
     {
-        if (!array_key_exists('CN', $this->rawCertificateFields['subject'])) {
+        if (!isset($this->rawCertificateFields['subject']['CN'])) {
             return '';
         }
 
-        if (is_string($this->rawCertificateFields['subject']['CN'])) {
-            return $this->rawCertificateFields['subject']['CN'];
+        $cn = $this->rawCertificateFields['subject']['CN'];
+        if (is_string($cn)) {
+            return $cn;
         }
 
-        if (is_array($this->rawCertificateFields['subject']['CN'])) {
-            return $this->rawCertificateFields['subject']['CN'][0];
+        if (is_array($cn) && isset($cn[0]) && is_string($cn[0])) {
+            return $cn[0];
         }
 
         return '';
     }
 
     /**
-     * 获取额外的主机名
+     * 获取额外的主机名 (SAN)
      * @return array
      */
     public function getAdditionalDomains(): array
     {
-        $additionalDomains = explode(', ', $this->rawCertificateFields['extensions']['subjectAltName'] ?? '');
-        return array_map(function (string $domain) {
+        $subjectAltName = $this->rawCertificateFields['extensions']['subjectAltName'] ?? '';
+        if (!is_string($subjectAltName) || $subjectAltName === '') {
+            return [];
+        }
+        $additionalDomains = explode(', ', $subjectAltName);
+        $domains = array_map(static function (string $domain): string {
             return str_replace('DNS:', '', $domain);
         }, $additionalDomains);
+        return array_values(array_filter($domains, static function ($domain): bool {
+            return is_string($domain) && $domain !== '';
+        }));
     }
 
     /**
-     * 获取证书域名列表
+     * 获取证书域名列表 (主域 + SAN)
      * @return array
      */
     public function getDomains(): array
     {
         $allDomains = $this->getAdditionalDomains();
-        $allDomains[] = $this->getDomain();
+        $domain = $this->getDomain();
+        if ($domain !== '') {
+            $allDomains[] = $domain;
+        }
         $uniqueDomains = array_unique($allDomains);
-        return array_values(array_filter($uniqueDomains));
+        return array_values(array_filter($uniqueDomains, static function ($item): bool {
+            return is_string($item) && $item !== '';
+        }));
     }
 
     /**
@@ -192,19 +250,27 @@ class SSLCertificate
     /**
      * 证书签发日期
      * @return Carbon
+     * @throws RuntimeException 当原始字段缺失时间戳时
      */
     public function validFromDate(): Carbon
     {
-        return Carbon::createFromTimestampUTC($this->rawCertificateFields['validFrom_time_t']);
+        if (!isset($this->rawCertificateFields['validFrom_time_t'])) {
+            throw new RuntimeException('Certificate does not contain a "validFrom_time_t" field.');
+        }
+        return Carbon::createFromTimestampUTC((int)$this->rawCertificateFields['validFrom_time_t']);
     }
 
     /**
      * 证书截止日期
      * @return Carbon
+     * @throws RuntimeException 当原始字段缺失时间戳时
      */
     public function expirationDate(): Carbon
     {
-        return Carbon::createFromTimestampUTC($this->rawCertificateFields['validTo_time_t']);
+        if (!isset($this->rawCertificateFields['validTo_time_t'])) {
+            throw new RuntimeException('Certificate does not contain a "validTo_time_t" field.');
+        }
+        return Carbon::createFromTimestampUTC((int)$this->rawCertificateFields['validTo_time_t']);
     }
 
     /**
@@ -213,7 +279,7 @@ class SSLCertificate
      */
     public function lifespanInDays(): int
     {
-        return $this->validFromDate()->diffInDays($this->expirationDate());
+        return (int)$this->validFromDate()->diffInDays($this->expirationDate());
     }
 
     /**
@@ -231,27 +297,31 @@ class SSLCertificate
      */
     public function isSelfSigned(): bool
     {
-        return $this->getIssuer() === $this->getDomain();
+        return $this->getIssuer() === $this->getDomain() && $this->getIssuer() !== '';
     }
 
     /**
-     * 是否是 RSA-SHA1 签名的证书
+     * 是否是 SHA1 签名的证书
      * @return bool
      */
     public function usesSha1Hash(): bool
     {
         $certificateFields = $this->getRawCertificateFields();
-        if ($certificateFields['signatureTypeSN'] === 'RSA-SHA1') {
+        $shortName = $certificateFields['signatureTypeSN'] ?? '';
+        $longName = $certificateFields['signatureTypeLN'] ?? '';
+        if ($shortName === 'RSA-SHA1' || $shortName === 'dsaWithSHA1' || $shortName === 'ecdsa-with-SHA1') {
             return true;
         }
-        if ($certificateFields['signatureTypeLN'] === 'sha1WithRSAEncryption') {
+        if ($longName === 'sha1WithRSAEncryption'
+            || $longName === 'sha1WithEncryption'
+            || $longName === 'ecdsa-with-SHA1') {
             return true;
         }
         return false;
     }
 
     /**
-     * 获取剩余有效的天数
+     * 获取剩余有效的天数 (负数表示已过期)
      * @return int
      */
     public function daysUntilExpirationDate(): int
@@ -263,7 +333,7 @@ class SSLCertificate
 
     /**
      * 是否适用于指定的 URL
-     * @param string $url
+     * @param string $url URL 或主机/IP
      * @return bool
      */
     public function appliesToUrl(string $url): bool
@@ -273,13 +343,14 @@ class SSLCertificate
         } else {
             try {
                 $host = (new Url($url))->getHostName();
-            } catch (Exception\InvalidUrlException $e) {
+            } catch (InvalidUrlException $e) {
                 return false;
             }
         }
+        $host = strtolower($host);
         $certificateHosts = $this->getDomains();
         foreach ($certificateHosts as $certificateHost) {
-            $certificateHost = str_replace('ip address:', '', strtolower($certificateHost));
+            $certificateHost = strtolower(str_replace('ip address:', '', (string)$certificateHost));
             if ($host === $certificateHost) {
                 return true;
             }
@@ -297,19 +368,24 @@ class SSLCertificate
      */
     public function isValid(?string $url = null): bool
     {
-        if (!Carbon::now()->between($this->validFromDate(), $this->expirationDate())) {
+        try {
+            $now = Carbon::now();
+            if (!$now->between($this->validFromDate(), $this->expirationDate())) {
+                return false;
+            }
+        } catch (RuntimeException $e) {
             return false;
         }
         if (!empty($url)) {
-            return $this->appliesToUrl($url ?? $this->getDomain());
+            return $this->appliesToUrl($url);
         }
         return true;
     }
 
     /**
-     * 验证有效期是否小于于指定时间
-     * @param Carbon $carbon
-     * @param string|null $url
+     * 验证有效期是否超过指定时间
+     * @param Carbon $carbon 比较时间点
+     * @param string|null $url 可选的 URL 校验
      * @return bool
      */
     public function isValidUntil(Carbon $carbon, ?string $url = null): bool
@@ -321,18 +397,23 @@ class SSLCertificate
     }
 
     /**
-     * 是否包含指定的域名
+     * 是否包含指定的域名 (主域完全匹配, 或子域匹配)
      * @param string $domain
      * @return bool
      */
     public function containsDomain(string $domain): bool
     {
+        $domain = strtolower($domain);
         $certificateHosts = $this->getDomains();
         foreach ($certificateHosts as $certificateHost) {
+            $certificateHost = strtolower((string)$certificateHost);
+            if ($certificateHost === '') {
+                continue;
+            }
             if ($certificateHost === $domain) {
                 return true;
             }
-            if (StringHelper::endsWith($domain, '.'.$certificateHost)) {
+            if (StringHelper::endsWith($domain, '.' . $certificateHost)) {
                 return true;
             }
         }
@@ -356,8 +437,8 @@ class SSLCertificate
 
     /**
      * 是否匹配通配符主机
-     * @param string $wildcardHost
-     * @param string $host
+     * @param string $wildcardHost 例如 *.example.com
+     * @param string $host 已转小写的主机
      * @return bool
      */
     protected function wildcardHostCoversHost(string $wildcardHost, string $host): bool
@@ -365,14 +446,12 @@ class SSLCertificate
         if ($host === $wildcardHost) {
             return true;
         }
-        if (!StringHelper::startsWith($wildcardHost, '*')) {
+        if (!StringHelper::startsWith($wildcardHost, '*.')) {
             return false;
         }
-        if (substr_count($wildcardHost, '.') < substr_count($host, '.')) {
-            return false;
-        }
-        $wildcardHostWithoutWildcard = substr($wildcardHost, 1);
-        $hostWithDottedPrefix = ".{$host}";
+        // RFC 6125: 通配符只覆盖单个左侧标签
+        $wildcardHostWithoutWildcard = substr($wildcardHost, 1); // ".example.com"
+        $hostWithDottedPrefix = '.' . $host;
         return StringHelper::endsWith($hostWithDottedPrefix, $wildcardHostWithoutWildcard);
     }
 }
