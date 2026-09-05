@@ -26,12 +26,12 @@ class SSLCertificate
     /**
      * @var string 证书指纹
      */
-    protected string $fingerprint;
+    protected string $fingerprint = '';
 
     /**
      * @var string SHA256指纹
      */
-    protected string $fingerprintSha256;
+    protected string $fingerprintSha256 = '';
 
     /**
      * SSLCertificate constructor.
@@ -449,9 +449,14 @@ class SSLCertificate
         if (!StringHelper::startsWith($wildcardHost, '*.')) {
             return false;
         }
-        // RFC 6125: 通配符只覆盖单个左侧标签
-        $wildcardHostWithoutWildcard = substr($wildcardHost, 1); // ".example.com"
-        $hostWithDottedPrefix = '.' . $host;
-        return StringHelper::endsWith($hostWithDottedPrefix, $wildcardHostWithoutWildcard);
+        // RFC 6125: 通配符 "*" 只能匹配单个最左侧标签
+        // 因此 $wildcardHost 的最左标签必须是单独的 "*"，且 $host 的最左标签必须存在且非空
+        $suffix = substr($wildcardHost, 2); // "example.com"
+        $hostSuffix = substr($host, -strlen($suffix));
+        if ($hostSuffix !== $suffix) {
+            return false;
+        }
+        $leftLabel = substr($host, 0, -strlen($suffix) - 1); // 去掉 ".suffix" 后的左侧
+        return $leftLabel !== '' && strpos($leftLabel, '.') === false;
     }
 }
